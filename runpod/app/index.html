@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedGemma Imaging Assistant</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--muted:#5b6575;--line:#e2e6ec;--accent:#0b6bcb;--ok:#13804a;--warn:#b26a00;--off:#8a93a2;--code:#f0f3f7}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#171c23;--ink:#e8ecf2;--muted:#9aa5b5;--line:#28303a;--accent:#5aa9ff;--ok:#3ccf7f;--warn:#f0a43a;--off:#6b7584;--code:#1f2630}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px}
+h1{font-size:24px;margin:0}h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.sub{color:var(--muted);margin:2px 0 0}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--off)}.ready .dot{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent)}.booting .dot{background:var(--warn)}
+.grid{display:grid;gap:16px}.two{grid-template-columns:1fr 1fr}@media(max-width:860px){.two{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;counter-reset:s}@media(max-width:700px){.steps{grid-template-columns:1fr 1fr}}
+.step{border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px}.step b{display:block;margin-bottom:4px}
+.step:before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;margin-bottom:6px}
+.samples{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}@media(max-width:700px){.samples{grid-template-columns:repeat(3,1fr)}}
+.sample{border:2px solid transparent;border-radius:10px;padding:0;background:none;cursor:pointer;text-align:left;color:inherit}
+.sample img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;background:#000}
+.sample span{display:block;font-size:12px;color:var(--muted);padding:4px 2px}.sample.sel{border-color:var(--accent)}
+.prompt{background:var(--code);border-radius:8px;padding:10px;font-size:13px;margin:12px 0;color:var(--muted)}
+button.go{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600;font-size:15px;cursor:pointer}button.go:disabled{opacity:.45;cursor:not-allowed}
+.out{white-space:pre-wrap;font-size:14px;min-height:240px}.meta{font-size:12px;color:var(--muted);margin-top:10px}
+.note{font-size:12px;color:var(--muted);border-left:3px solid var(--warn);padding-left:10px;margin-top:12px}
+.arch{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}.node{flex:1 1 160px;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px}
+.node b{display:block;font-size:14px}.node small{color:var(--muted);display:block}.arrow{align-self:center;color:var(--muted);font-size:20px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}.kv dt{color:var(--muted)}.kv dd{margin:0;font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>MedGemma Imaging Assistant</h1><p class="sub">Draft findings for a clinician to review, from an open medical model on an on-demand GPU</p></div>
+  <span id="pill" class="pill"><span class="dot"></span><span id="pilltxt">checking GPU…</span></span>
+</header>
+
+<section class="grid two" style="margin-bottom:16px">
+  <div class="card"><h2>The problem</h2>
+    <p style="margin:0">Imaging volume keeps growing faster than the number of specialists who read it. Studies wait in a queue, and urgent ones can sit behind routine ones. A model can write a first draft and flag what looks abnormal, so the specialist starts from a draft instead of a blank page. The specialist still decides.</p>
+  </div>
+  <div class="card"><h2>The workflow</h2>
+    <div class="steps">
+      <div class="step"><b>Image in</b>X-ray, fundus or skin photo</div>
+      <div class="step"><b>MedGemma reads</b>on a GPU that runs only during the session</div>
+      <div class="step"><b>Draft report</b>findings, impression, referral flag</div>
+      <div class="step"><b>Human review</b>the clinician accepts, edits or rejects</div>
+    </div>
+  </div>
+</section>
+
+<section class="grid two" style="margin-bottom:16px">
+  <div class="card"><h2>1 · Pick a study</h2>
+    <div id="samples" class="samples"></div>
+    <div id="prompt" class="prompt">Choose an image.</div>
+    <button id="go" class="go" disabled>Generate draft report</button>
+  </div>
+  <div class="card"><h2>2 · Draft for clinician review</h2>
+    <div id="out" class="out" style="color:var(--muted)">The draft appears here.</div>
+    <div id="meta" class="meta"></div>
+    <div class="note">Research demo on public, de-identified images. Not for clinical use. MedGemma output must be checked by a qualified clinician.</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Infrastructure (live)</h2>
+  <div class="arch">
+    <div class="node"><b>Browser</b><small>this page</small></div><div class="arrow">→</div>
+    <div class="node"><b>Caddy + demo app</b><small>Contabo VPS · <span id="host">…</span></small><small>TLS, page, holds the GPU key</small></div><div class="arrow">→</div>
+    <div class="node"><b>RunPod GPU pod</b><small id="gpu">off</small><small>vLLM, OpenAI-compatible API</small></div><div class="arrow">→</div>
+    <div class="node"><b>MedGemma 1.5 4B</b><small>google/medgemma-1.5-4b-it</small><small>bf16, open weights</small></div>
+  </div>
+  <dl class="kv" style="margin-top:14px">
+    <dt>GPU pod</dt><dd id="kv-pod">off</dd>
+    <dt>Price</dt><dd id="kv-price">–</dd>
+    <dt>Cold start</dt><dd id="kv-boot">–</dd>
+    <dt>Auto-off in</dt><dd id="kv-left">–</dd>
+    <dt>Budget</dt><dd>₹100/month hard cap · pod self-terminates · no idle storage</dd>
+  </dl>
+</section>
+</main>
+<script>
+let cases=[],sel=null,status={status:"off"};
+const $=id=>document.getElementById(id);
+const mmss=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+async function loadCases(){
+  cases=await (await fetch("api/cases")).json();
+  $("samples").innerHTML=cases.map(c=>`<button class="sample" data-id="${c.id}"><img src="samples/${c.id}.jpg" alt="${c.label}"><span>${c.domain}<br>${c.label}</span></button>`).join("");
+  document.querySelectorAll(".sample").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".sample").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");
+    sel=cases.find(c=>c.id===b.dataset.id);$("prompt").textContent="Prompt: "+sel.prompt;sync();});
+}
+function sync(){$("go").disabled=!(sel&&status.status==="ready");}
+async function poll(){
+  try{status=await (await fetch("api/status")).json();}catch(e){status={status:"off"}}
+  const s=status.status;$("pill").className="pill "+s;
+  $("pilltxt").textContent=s==="ready"?`GPU live · ${status.gpu}`:s==="booting"?`GPU starting… ${mmss(status.up_for||0)}`:"GPU off (on-demand)";
+  $("host").textContent=status.host||"…";
+  const on=s==="ready"||s==="booting";
+  $("gpu").textContent=on?status.gpu:"off";
+  $("kv-pod").textContent=on?`${status.pod_id} · ${s}`:"off — started only for live demos";
+  $("kv-price").textContent=on&&status.cost_per_hr?`$${status.cost_per_hr}/hr ≈ ₹${(status.cost_per_hr*89).toFixed(1)}/hr`:"–";
+  $("kv-boot").textContent=status.ready_after_s?`${status.ready_after_s}s to load the model`:"–";
+  $("kv-left").textContent=on?mmss(status.seconds_left):"–";
+  sync();
+}
+$("go").onclick=async()=>{
+  $("go").disabled=true;$("out").style.color="var(--muted)";$("out").textContent="MedGemma is reading the image…";$("meta").textContent="";
+  const t=performance.now();
+  try{
+    const r=await fetch("api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({case_id:sel.id})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error);
+    $("out").style.color="var(--ink)";$("out").textContent=j.output;
+    $("meta").textContent=`${j.seconds}s on ${j.gpu} (pod ${j.pod_id}) · ${j.tokens_in} tokens in, ${j.tokens_out} out · source label: ${sel.label}`;
+  }catch(e){$("out").textContent=e.message;}
+  sync();
+};
+loadCases();poll();setInterval(poll,3000);
+</script>
+</body>
+</html>

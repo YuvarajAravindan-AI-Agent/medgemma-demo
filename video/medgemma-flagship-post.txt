@@ -1,0 +1,20 @@
+I gave Google's open medical AI model five medical images with known answers. It got four right, and the one it got wrong is the most useful part.
+
+MedGemma 1.5 (4B parameters) ran on a single free cloud GPU and read public-domain images:
+✅ Normal chest X-ray: "Normal chest X-ray." (9 s)
+✅ Healthy retina: no diabetic retinopathy, no referral
+✅ Diabetic retina: microaneurysms and haemorrhages, refer to a specialist
+✅ Melanoma: ABCDE checklist, melanoma first, biopsy recommended
+❌ Lobar pneumonia X-ray: "No acute cardiopulmonary process."
+
+That last answer is a clean, confident, wrong report. That's why a model like this is a fast first reader, not a doctor.
+
+The pattern we build at AI Agentic Enterprises:
+→ The model drafts
+→ A clinician signs off
+→ Every decision lands in an audit trail
+→ Patient images stay in your own cloud. An open model means no PHI leaves your VPC.
+
+Method notes: outputs are unedited. A sixth image (pathology) was dropped because the diagnosis was printed on the image itself, so it wasn't a fair test. This is a research demo, not for clinical use. Images: Wikimedia Commons (CC0 / public domain).
+
+#HealthcareAI #MedGemma #ResponsibleAI #AgenticAI #HealthTech
